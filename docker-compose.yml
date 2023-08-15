@@ -50,6 +50,20 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
+  schemaregistry:
+    image: confluentinc/cp-schema-registry:6.2.0
+    restart: always
+    depends_on:
+      - zookeeper
+    environment:
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_HOST_NAME: schemaregistry
+      SCHEMA_REGISTRY_LISTENERS: "http://0.0.0.0:8085"
+    ports:
+      - 8085:8085
+    networks:
+      - broker-kafka
+
   kafdrop:
     image: obsidiandynamics/kafdrop:latest
     networks:

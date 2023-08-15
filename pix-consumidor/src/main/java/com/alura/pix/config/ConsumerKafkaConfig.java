@@ -1,6 +1,9 @@
 package com.alura.pix.config;
 
+import com.alura.pix.avro.PixRecord;
 import com.alura.pix.dto.PixDTO;
+import io.confluent.kafka.serializers.KafkaAvroDeserializer;
+import io.confluent.kafka.serializers.KafkaAvroDeserializerConfig;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -44,7 +47,7 @@ public class ConsumerKafkaConfig {
 
 
     @Bean
-    public ConsumerFactory<String, PixDTO> consumerFactory() {
+    public ConsumerFactory<String, PixRecord> consumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(
                 ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG,
@@ -54,7 +57,15 @@ public class ConsumerKafkaConfig {
                 StringDeserializer.class);
         props.put(
                 ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG,
-                JsonDeserializer.class);
+                KafkaAvroDeserializer.class);
+        props.put(
+                "schema.registry.url",
+                "http://localhost:8085"
+        );
+        props.put(
+                KafkaAvroDeserializerConfig.SPECIFIC_AVRO_READER_CONFIG,
+                true
+        );
         props.put(
                 JsonDeserializer.TRUSTED_PACKAGES,
                 "*");
@@ -73,10 +84,10 @@ public class ConsumerKafkaConfig {
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, PixDTO>
+    public ConcurrentKafkaListenerContainerFactory<String, PixRecord>
     kafkaListenerContainerFactory() {
 
-        ConcurrentKafkaListenerContainerFactory<String, PixDTO> factory =
+        ConcurrentKafkaListenerContainerFactory<String, PixRecord> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory());
         return factory;
