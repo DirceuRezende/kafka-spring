@@ -8,6 +8,9 @@ import com.alura.pix.model.Key;
 import com.alura.pix.model.Pix;
 import com.alura.pix.repository.KeyRepository;
 import com.alura.pix.repository.PixRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.avro.generic.GenericData;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
@@ -24,28 +27,35 @@ public class PixValidator {
     @Autowired
     private PixRepository pixRepository;
 
-    @KafkaListener(topics = "pix-topic", groupId = "grupo")
+    @KafkaListener(topics = "pix-service.public.pix", groupId = "grupo")
     @RetryableTopic(
             backoff = @Backoff(value = 3000L),
             attempts = "5",
             autoCreateTopics = "true",
             include = KeyNotFoundException.class
     )
-    public void processaPix(PixRecord pixRecord) {
-        System.out.println("Pix  recebido: " + pixRecord.getIdentificador().toString());
+    public void processaPix(GenericData.Record data) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
 
-        Pix pix = pixRepository.findByIdentifier(pixRecord.getIdentificador().toString());
+        PixDTO pixDTO = objectMapper.readValue(data.get("after").toString(), PixDTO.class);
 
-        Key origem = keyRepository.findByChave(pixRecord.getChaveOrigem().toString());
-        Key destino = keyRepository.findByChave(pixRecord.getChaveDestino().toString());
+        System.out.println("Pix  recebido: " + pixDTO.getIdentifier());
 
-        if (origem == null || destino == null) {
-            pix.setStatus(PixStatus.ERRO);
-            throw new KeyNotFoundException();
-        } else {
-            pix.setStatus(PixStatus.PROCESSADO);
+        if(pixDTO.getStatus().equals(PixStatus.EM_PROCESSAMENTO)) {
+            Pix pix = pixRepository.findByIdentifier(pixDTO.getIdentifier());
+
+            Key origem = keyRepository.findByChave(pixDTO.getChaveOrigem());
+            Key destino = keyRepository.findByChave(pixDTO.getChaveDestino());
+
+            if (origem == null || destino == null) {
+                pix.setStatus(PixStatus.ERRO);
+                throw new KeyNotFoundException();
+            } else {
+                pix.setStatus(PixStatus.PROCESSADO);
+            }
+            pixRepository.save(pix);
         }
-        pixRepository.save(pix);
     }
 
 }

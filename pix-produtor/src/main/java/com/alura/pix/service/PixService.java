@@ -16,9 +16,6 @@ public class PixService {
     @Autowired
     private final PixRepository pixRepository;
 
-    @Autowired
-    private final KafkaTemplate<String, PixRecord>  kafkaTemplate;
-
     public PixDTO salvarPix(PixDTO pixDTO) {
         pixRepository.save(Pix.toEntity(pixDTO));
 
@@ -31,7 +28,6 @@ public class PixService {
                         .setValor(pixDTO.getValor())
                         .build();
 
-        kafkaTemplate.send("pix-topic", pixRecord.getIdentificador().toString(), pixRecord);
         return pixDTO;
     }
 
